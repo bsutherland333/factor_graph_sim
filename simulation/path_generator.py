@@ -12,9 +12,13 @@ def line_path(n_points, start_location, end_location):
 
     Returns:
     np.array: The points of the line path. [[x1, y1], [x2, y2], ...]
+    np.array: The heading of the robot at each point. [theta1, theta2, ... ]
     """
-    return np.array([start_location + i * (end_location - start_location) / n_points
-                     for i in range(n_points)])
+    position = np.array([start_location + i * (end_location - start_location) / n_points
+                         for i in range(n_points)])
+    heading = np.arctan2(end_location[1] - start_location[1],
+                         end_location[0] - start_location[0]) * np.ones(n_points)
+    return position, heading
 
 def arc_path(n_points, start_location, end_location, angle):
     """
@@ -29,17 +33,13 @@ def arc_path(n_points, start_location, end_location, angle):
 
     Returns:
     np.array: The points of the arc path. [[x1, y1], [x2, y2], ...]
+    np.array: The heading of the robot at each point. [theta1, theta2, ... ]
     """
 
-    # Ensure the angle is positive, flipping if negative
-    if angle < 0:
-        angle = -angle
-        start_location, end_location = end_location, start_location
-
-    # Clamp the angle to +-90 degrees
-    if angle >= 90:
-        print('Warning: Arc angles greater than or equal to +-90 degrees are not supported',
-              'by arc_path, clamping...')
+    # Clamp the angle to 0-90 degrees
+    if angle >= 90 or angle < 0:
+        print('Warning: Arc angles greater than or equal to 90 degrees or less than 0',
+              'are not supported by arc_path, clamping...')
         angle = np.clip(angle, 0, 89.99999)
 
     # If the angle is 0, generate a line path to avoid numerical instability
@@ -71,5 +71,7 @@ def arc_path(n_points, start_location, end_location, angle):
     points = np.array([center_point + radius * np.array([np.cos(start_angle + i * delta_angle),
                                                          np.sin(start_angle + i * delta_angle)])
                        for i in range(n_points)])
+    heading = np.array([angle_from_zero + i * delta_angle for i in range(n_points)])
+    heading -= np.floor((heading + np.pi) / (2*np.pi)) * 2*np.pi
 
-    return points
+    return points, heading
