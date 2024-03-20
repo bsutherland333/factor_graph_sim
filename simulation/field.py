@@ -6,13 +6,13 @@ class Field:
     Generates a field with landmarks for the robot to explore.
     """
 
-    def __init__(self, n_landmarks=10, field_range=[10, 10], landmark_pattern='random'):
+    def __init__(self, field_range, n_landmarks=10, landmark_pattern='random'):
         """
         Initializes the field with the given parameters.
 
         Parameters:
-        n_landmarks (int): The number of landmarks to generate.
         field_range (list): The range of the field. [x_range, y_range]
+        n_landmarks (int): The number of landmarks to generate.
         landmark_pattern (str): The pattern to generate the landmarks.
         """
         self.n_landmarks = n_landmarks
