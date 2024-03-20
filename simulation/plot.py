@@ -40,6 +40,9 @@ def plot_field(landmarks=None, estimated_poses=None, true_poses=None,
         plt.title(title)
     plt.legend()
 
+    # Set scale to be equivalent
+    plt.axis('equal')
+
     # Show plot
     plt.xlabel('X')
     plt.ylabel('Y')
