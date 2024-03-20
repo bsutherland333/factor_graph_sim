@@ -1,23 +1,18 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-def plot_field(field_range, landmarks=None,
-               estimated_poses=None, true_poses=None,
+def plot_field(landmarks=None, estimated_poses=None, true_poses=None, 
                measurements=None, title=None):
     """
     Plot the field with the landmarks, estimated_poses, and measurements.
 
     Parameters:
-    field_range (list): The range of the field. [x_range, y_range]
     landmarks (np.array): The absolute positions of the landmarks. [[x1, y1], ...]
     estimated_poses (np.array): The positions of the robot's estimated poses. [[x1, y1], ...]
     true_poses (np.array): The positions of the robot's true poses. [[x1, y1], ...]
     measurements (list): The measurements of the robot. [[landmark_index, pose_index], ...]
     title (str): The title of the plot.
     """
-    # Unpack field range
-    x_range, y_range = field_range
-
     # Plot measurements
     if measurements is not None and estimated_poses is not None and landmarks is not None:
         for measurement in measurements:
@@ -39,10 +34,6 @@ def plot_field(field_range, landmarks=None,
     if estimated_poses is not None:
         plt.plot(estimated_poses[:, 0], estimated_poses[:, 1], marker='o',
                  color='blue', label='Estimated Pose')
-
-    # Set plot limits based on field range
-    plt.xlim([0, x_range])
-    plt.ylim([0, y_range])
 
     # Add title and legend
     if title is not None:
