@@ -30,13 +30,21 @@ def arc_path(n_points, start_location, end_location, angle):
     Returns:
     np.array: The points of the arc path. [[x1, y1], [x2, y2], ...]
     """
+
+    # Ensure the angle is positive, flipping if negative
+    if angle < 0:
+        angle = -angle
+        start_location, end_location = end_location, start_location
+
+    # Clamp the angle to +-90 degrees
+    if angle >= 90:
+        print('Warning: Arc angles greater than or equal to +-90 degrees are not supported',
+              'by arc_path, clamping...')
+        angle = np.clip(angle, 0, 89.99999)
+
+    # If the angle is 0, generate a line path to avoid numerical instability
     if angle == 0:
         return line_path(n_points, start_location, end_location)
-
-    if np.abs(angle) > 45:
-        print('Warning: Arc angles greater than 45 degrees are not supported by arc_path,'
-              + 'clamping to 45 degrees...')
-        angle = np.sign(angle) * 45
 
     angle = np.deg2rad(angle)
 
@@ -54,12 +62,14 @@ def arc_path(n_points, start_location, end_location, angle):
                            end_location[0] - center_point[0])
 
     # Calculate the delta angle per point
-    delta_angle = (end_angle - start_angle) / (n_points - 1)
+    if np.abs(start_angle - end_angle) > np.pi:
+        delta_angle = -(np.pi*2 - (end_angle - start_angle)) / (n_points - 1)
+    else:
+        delta_angle = (end_angle - start_angle) / (n_points - 1)
 
     # Generate the points
-    points = np.array([center_point + np.abs(radius)
-                       * np.array([np.cos(start_angle + i * delta_angle),
-                                   np.sin(start_angle + i * delta_angle)])
+    points = np.array([center_point + radius * np.array([np.cos(start_angle + i * delta_angle),
+                                                         np.sin(start_angle + i * delta_angle)])
                        for i in range(n_points)])
 
     return points
