@@ -2,13 +2,13 @@ import os
 import sys
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
-parent_dir = os.path.abspath(os.path.join(script_dir, '..'))
-sys.path.append(parent_dir)
+src_dir = os.path.abspath(os.path.join(script_dir, '../src'))
+sys.path.append(src_dir)
 
-from simulation.landmarks import generate_uniform_random_landmarks
-from simulation.plotter import plot_field
-from simulation.path import line_path, arc_path
-from simulation.measurements import generate_gaussian_measurements
+from landmarks import generate_uniform_random_landmarks
+from plotter import plot_field
+from path import line_path, arc_path
+from measurements import generate_gaussian_measurements
 
 import numpy as np
 
