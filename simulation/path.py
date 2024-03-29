@@ -23,6 +23,11 @@ def arc_path(n_points, start_location, end_location, angle):
     """
     Generates an arc path.
 
+    The approach I used here is not great, as dealing with trig in all 4 quadrants with positive
+    and negative curvature is a real pain. If I get bored I should rewrite this to contruct an arc
+    with positive curvature along the x-axis and then flip, rotate, and translate as needed to
+    get it in the right place.
+
     Parameters:
     n_points (int): The number of points to generate.
     start_location (np.array): The starting location of the arc. [x, y]
