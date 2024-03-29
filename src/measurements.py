@@ -21,20 +21,49 @@ def generate_gaussian_measurements(pose, landmarks, range_std, bearing_std, max_
 
     for i in range(pose.shape[0]):
         for j in range(landmarks.shape[0]):
-            # Calculate the range and bearing between the robot's pose and the landmark
-            delta_x = landmarks[j, 0] - pose[i, 0]
-            delta_y = landmarks[j, 1] - pose[i, 1]
-            range_to_landmark = np.sqrt(delta_x ** 2 + delta_y ** 2)
+            range_measurement = range_from_landmark(pose[i], landmarks[j])
 
-            if range_to_landmark <= max_range:
+            if range_measurement <= max_range:
+                bearing_measurement = bearing_from_landmark(pose[i], landmarks[j])
+
                 # Add noise to range and bearing measurements
-                noisy_range = range_to_landmark + np.random.normal(0, range_std)
-                bearing = np.arctan2(delta_y, delta_x) - pose[i, 2]
-                noisy_bearing = bearing + np.random.normal(0, bearing_std)
+                noisy_range = range_measurement + np.random.normal(0, range_std)
+                noisy_bearing = bearing_measurement + np.random.normal(0, bearing_std)
 
                 # Append the measurement as [range, bearing] to the measurements list
                 measurements.append([noisy_range, noisy_bearing])
-                associations.append([i, j])
+                associations.append([i, j])  # [pose_index, landmark_index]
 
     return np.array(measurements), np.array(associations)
 
+
+def range_from_landmark(pose, landmark):
+    """
+    Calculate the range from a robot's pose to a landmark.
+
+    Parameters:
+    pose (np.array): The robot's pose, in meters and radians. [x, y]
+    landmark (np.array): The location of the landmark, in meters. [x, y]
+
+    Returns:
+    float: The range from the robot's pose to the landmark.
+    """
+    delta_x = landmark[0] - pose[0]
+    delta_y = landmark[1] - pose[1]
+    return np.sqrt(delta_x ** 2 + delta_y ** 2)
+
+
+def bearing_from_landmark(pose, landmark):
+    """
+    Calculate the bearing from a robot's pose to a landmark.
+
+    Parameters:
+    pose (np.array): The robot's pose, in meters and radians. [x, y]
+    landmark (np.array): The location of the landmark, in meters. [x, y]
+
+    Returns:
+    float: The bearing from the robot's pose to the landmark.
+    """
+    delta_x = landmark[0] - pose[0]
+    delta_y = landmark[1] - pose[1]
+    return np.arctan2(delta_y, delta_x)
