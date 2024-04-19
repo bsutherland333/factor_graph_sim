@@ -21,6 +21,7 @@ from measurements import *
 
 import numpy as np
 from scipy.optimize import minimize
+import time
 
 
 # Generate simulated information for solver
@@ -63,9 +64,12 @@ def cost_function(x):
 
 
 # Solve the least squares problem with scipy
+start_time = time.time()
 initial_guess = odometry_path.flatten()
 result = minimize(cost_function, initial_guess, method='CG')
+runtime = time.time() - start_time
 print(result)
+print(f"Runtime: {runtime:.2f}s, Rate: {1 / runtime:.2f}Hz")
 
 
 # Plot the results
