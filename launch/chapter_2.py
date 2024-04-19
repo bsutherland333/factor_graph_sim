@@ -49,8 +49,8 @@ def cost_function(x):
         range_measurement = measurements[i, 0]
         bearing_measurement = measurements[i, 1]
 
-        expected_range = range_from_landmark(pose, landmark)
-        expected_bearing = bearing_from_landmark(pose, landmark)
+        expected_range = range_from_location(pose, landmark)
+        expected_bearing = bearing_from_location(pose, landmark)
 
         cost += (range_measurement - expected_range)**2 \
                 + (bearing_measurement - expected_bearing)**2

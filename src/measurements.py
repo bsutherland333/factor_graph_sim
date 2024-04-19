@@ -22,10 +22,10 @@ def generate_gaussian_measurements(pose, landmarks, range_std, bearing_std, max_
 
     for i in range(pose.shape[0]):
         for j in range(landmarks.shape[0]):
-            range_measurement = range_from_landmark(pose[i], landmarks[j])
+            range_measurement = range_from_location(pose[i], landmarks[j])
 
             if range_measurement <= max_range:
-                bearing_measurement = bearing_from_landmark(pose[i], landmarks[j])
+                bearing_measurement = bearing_from_location(pose[i], landmarks[j])
 
                 # Add noise to range and bearing measurements
                 noisy_range = range_measurement + np.random.normal(0, range_std)
@@ -38,36 +38,35 @@ def generate_gaussian_measurements(pose, landmarks, range_std, bearing_std, max_
     return np.array(measurements), np.array(associations)
 
 
-def range_from_landmark(pose, landmark):
+def range_from_location(pose, location):
     """
-    Calculate the range from a robot's pose to a landmark.
+    Calculate the range from a robot's pose to a location of interest.
 
     Parameters:
     pose (np.array): The robot's pose, in meters and radians. [x, y, psi]
-    landmark (np.array): The location of the landmark, in meters. [x, y]
+    location (np.array): The location of interest, in meters. [x, y]
 
     Returns:
-    float: The range from the robot's pose to the landmark.
+    float: The range from the robot's pose to the location.
     """
-    delta_x = landmark[0] - pose[0]
-    delta_y = landmark[1] - pose[1]
+    delta_x = location[0] - pose[0]
+    delta_y = location[1] - pose[1]
     return np.sqrt(delta_x ** 2 + delta_y ** 2)
 
 
-def bearing_from_landmark(pose, landmark):
+def bearing_from_location(pose, location):
     """
-    Calculate the relative bearing from a robot's pose to a landmark. Meaning, if the robot is
-    facing directly at the landmark, the bearing will be 0 (body frame).
+    Calculate the relative bearing from a robot's pose to a location of interest.
 
     Parameters:
     pose (np.array): The robot's pose, in meters and radians. [x, y, psi]
-    landmark (np.array): The location of the landmark, in meters. [x, y]
+    location (np.array): The location of the location, in meters. [x, y]
 
     Returns:
-    float: The bearing from the robot's pose to the landmark.
+    float: The bearing from the robot's pose to the location.
     """
-    delta_x = landmark[0] - pose[0]
-    delta_y = landmark[1] - pose[1]
+    delta_x = location[0] - pose[0]
+    delta_y = location[1] - pose[1]
     return np.arctan2(delta_y, delta_x) - pose[2]
 
 
@@ -96,15 +95,10 @@ def generate_odometry(path, range_noise, angle_noise, range_bias, angle_bias):
 
     # Generate measurements
     for i in range(path.shape[0] - 1):
-        delta_x = path[i + 1, 0] - path[i, 0]
-        delta_y = path[i + 1, 1] - path[i, 1]
-        delta_psi = path[i + 1, 2] - path[i, 2]
-
-        # Calculate the range and angle to the next point
-        range_measurement = np.sqrt(delta_x ** 2 + delta_y ** 2) \
+        range_measurement = range_from_location(path[i], path[i + 1]) \
                 + np.random.normal(0, range_noise) + range_bias
-        angle_measurement = delta_psi + np.random.normal(0, angle_noise) + angle_bias
-
+        angle_measurement = path[i + 1, 2] - path[i, 2] \
+                + np.random.normal(0, angle_noise) + angle_bias
         odometry.append([range_measurement, angle_measurement])
     odometry = np.array(odometry)
 
@@ -119,6 +113,9 @@ def generate_odometry(path, range_noise, angle_noise, range_bias, angle_bias):
 def get_next_pose_from_odom(pose, odometry):
     """
     Calculate the next pose of the robot given the current pose and odometry measurements.
+
+    NOTE: This function assumes the robot will follow an arc inbetween poses. As long as each pose
+    is close enought to the next then this should be a good assumption.
 
     Parameters:
     pose (np.array): The robot's current pose, in meters and radians. [x, y, psi]
