@@ -73,8 +73,8 @@ def range_to_location_jacobian(pose, location):
     delta_y = pose[:, 1] - location[:, 1]
     range_ = range_to_location(pose, location)
 
-    d_range_d_x = -delta_x / range_
-    d_range_d_y = -delta_y / range_
+    d_range_d_x = delta_x / range_
+    d_range_d_y = delta_y / range_
     d_range_d_psi = np.zeros_like(range_)
 
     return np.array([[d_range_d_x, d_range_d_y, d_range_d_psi]]).T.swapaxes(1, 2)
