@@ -16,7 +16,7 @@ sys.path.append(parent_dir)
 
 from landmarks import generate_uniform_random_landmarks
 from plotter import plot_field
-from path import line_path, arc_path
+from path import *
 from measurements import *
 
 import numpy as np

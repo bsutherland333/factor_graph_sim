@@ -19,6 +19,7 @@ def line_path(n_points, start_location, end_location):
                          end_location[0] - start_location[0]) * np.ones(n_points)
     return np.column_stack([position, heading])
 
+
 def arc_path(n_points, start_location, end_location, angle):
     """
     Generates an arc path.
@@ -61,6 +62,40 @@ def arc_path(n_points, start_location, end_location, angle):
     rotation_matrix = np.array([[np.cos(rotation_angle), -np.sin(rotation_angle)],
                                 [np.sin(rotation_angle), np.cos(rotation_angle)]])
     points = np.dot(points, rotation_matrix.T) + start_location
+    heading += rotation_angle
+
+    return np.column_stack([points, heading])
+
+
+def sine_path(n_points, start_location, end_location, amplitude, n_periods):
+    """
+    Generates a sine path.
+
+    Parameters:
+    n_points (int): The number of points to generate.
+    start_location (np.array): The starting location of the sine wave. [x, y]
+    end_location (np.array): The ending location of the sine wave. [x, y]
+    amplitude (float): The amplitude of the sine wave.
+    n_periods (int): The number of periods in the sine wave. Recommended to be an integer,
+        or an integer plus 0.5.
+
+    Returns:
+    np.array: The position and heading of the robot along a sine path. [[x1, y1, psi1], ... ]
+    """
+
+    # Generate the sine wave
+    length = np.linalg.norm(end_location - start_location)
+    x = np.linspace(0, n_periods, n_points) * length / n_periods
+    y = amplitude * np.sin(2*np.pi * x * n_periods / length)
+    y_prime = amplitude * 2*np.pi * n_periods / length * np.cos(2*np.pi * x * n_periods / length)
+    heading = np.arctan(y_prime)
+
+    # Rotate and translate the sine wave to the correct location
+    rotation_angle = np.arctan2(end_location[1] - start_location[1],
+                                end_location[0] - start_location[0])
+    rotation_matrix = np.array([[np.cos(rotation_angle), -np.sin(rotation_angle)],
+                                [np.sin(rotation_angle), np.cos(rotation_angle)]])
+    points = np.dot(np.column_stack([x, y]), rotation_matrix.T) + start_location
     heading += rotation_angle
 
     return np.column_stack([points, heading])

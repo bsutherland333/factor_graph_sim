@@ -15,7 +15,7 @@ import numpy as np
 field_range = np.array([[0, 10], [0, 10]])
 
 landmarks = generate_uniform_random_landmarks(15, field_range)
-path = arc_path(50, np.array([0, 0]), np.array([10, 10]), 30)
+path = sine_path(50, np.array([0, 0]), np.array([10, 10]), 1, 2)
 noisy_path = path + np.random.normal(0, 0.05, path.shape)
 measurements, measurement_associations = generate_gaussian_measurements(path, landmarks, range_std=0.05, bearing_std=0.05, max_range=4)
 
