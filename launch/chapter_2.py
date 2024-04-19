@@ -52,10 +52,8 @@ def cost_function(x):
         range_measurement = measurements[i, 0]
         bearing_measurement = measurements[i, 1]
 
-        expected_measurement = range_bearing_to_location(pose.reshape(-1, 3),
-                                                         landmark.reshape(-1, 2))
-        expected_range = expected_measurement[0, 0]
-        expected_bearing = expected_measurement[0, 1]
+        expected_range = range_to_location(pose.reshape(-1, 3), landmark.reshape(-1, 2))[0]
+        expected_bearing = bearing_to_location(pose.reshape(-1, 3), landmark.reshape(-1, 2))[0]
 
         cost += (range_measurement - expected_range)**2 \
                 + (bearing_measurement - expected_bearing)**2
