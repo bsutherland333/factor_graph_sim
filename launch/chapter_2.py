@@ -23,6 +23,8 @@ import numpy as np
 from scipy.optimize import minimize
 import time
 
+# Set random seed for reproducibility
+np.random.seed(100)
 
 # Generate simulated information for solver
 field_range = np.array([[0, 10], [0, 10]])
@@ -50,14 +52,14 @@ def cost_function(x):
         range_measurement = measurements[i, 0]
         bearing_measurement = measurements[i, 1]
 
-        expected_range = range_from_location(pose, landmark)
-        expected_bearing = bearing_from_location(pose, landmark)
+        expected_range = range_from_location(pose.reshape(-1, 3), landmark.reshape(-1, 2))
+        expected_bearing = bearing_from_location(pose.reshape(-1, 3), landmark.reshape(-1, 2))
 
         cost += (range_measurement - expected_range)**2 \
                 + (bearing_measurement - expected_bearing)**2
 
     for i in range(odometry.shape[0]):
-        expected_pose = get_next_pose_from_odom(x[i], odometry[i])
+        expected_pose = get_next_pose_from_odom(x[i].reshape(-1, 3), odometry[i].reshape(-1, 2))[0]
         cost += np.linalg.norm(x[i + 1] - expected_pose)**2
 
     return cost
