@@ -23,13 +23,11 @@ def generate_gaussian_measurements(pose, landmarks, range_std, bearing_std, max_
 
     for i in range(pose.shape[0]):
         for j in range(landmarks.shape[0]):
-            range_measurement = range_from_location(pose[i].reshape(-1, 3),
-                                                    landmarks[j].reshape(-1, 2))[0]
+            range_measurement, bearing_measurement = \
+                    range_bearing_to_location(pose[i].reshape(-1, 3),
+                                              landmarks[j].reshape(-1, 2))[0]
 
             if range_measurement <= max_range:
-                bearing_measurement = bearing_from_location(pose[i].reshape(-1, 3),
-                                                            landmarks[j].reshape(-1, 2))[0]
-
                 # Add noise to range and bearing measurements
                 noisy_range = range_measurement + np.random.normal(0, range_std)
                 noisy_bearing = bearing_measurement + np.random.normal(0, bearing_std)
@@ -41,34 +39,54 @@ def generate_gaussian_measurements(pose, landmarks, range_std, bearing_std, max_
     return np.array(measurements), np.array(associations)
 
 
-def range_from_location(pose, location):
+def range_bearing_to_location(pose, location):
     """
-    Calculate the range from a robot's pose to a location of interest.
+    Calculate the range and bearing from a robot's pose to a location of interest.
 
     Parameters:
     pose (np.array): The robot's pose, in meters and radians. [[x1, y1, psi1], ...]
     location (np.array): The location of interest, in meters. [[x1, y1], ...]
 
     Returns:
-    np.array: The range from the robot's pose to the location. [range1, ...]
-    """
-    return np.linalg.norm(location - pose[:, :2], axis=1)
-
-
-def bearing_from_location(pose, location):
-    """
-    Calculate the relative bearing from a robot's pose to a location of interest.
-
-    Parameters:
-    pose (np.array): The robot's pose, in meters and radians. [[x1, y1, psi1], ...]
-    location (np.array): The coordinates of the location, in meters. [[x1, y1], ...]
-
-    Returns:
-    np.array: The bearing from the robot's pose to the location. [bearing1, ...]
+    np.array: The range and bearing from the robot's pose to the location. [[range1, bearing1], ...]
     """
     delta_x = location[:, 0] - pose[:, 0]
     delta_y = location[:, 1] - pose[:, 1]
-    return np.arctan2(delta_y, delta_x) - pose[:, 2]
+    bearing = np.arctan2(delta_y, delta_x) - pose[:, 2]
+    range_ = np.linalg.norm(location - pose[:, :2], axis=1)
+    return np.array([range_, bearing]).T
+
+
+def range_bearing_to_location_jacobian(pose, location):
+    """
+    Calculates the jacobean of the range and bearing measurement from a robot's pose to a location
+    of interest, with respect to and evaluated at the robot's pose.
+
+    Parameters:
+    pose (np.array): The robot's pose, in meters and radians. [[x1, y1, psi1], ...]
+    location (np.array): The location of interest, in meters. [[x1, y1], ...]
+
+    Returns:
+    np.array: The jacobian of the range. [[[d_range/d_x, d_range/d_y, d_range/d_psi], 
+                                           [d_bearing/d_x, d_bearing/d_y, d_bearing/d_psi]], ...]
+    """
+
+    # Calculate the gradient for the range measurement
+    delta_x = pose[:, 0] - location[:, 0]
+    delta_y = pose[:, 1] - location[:, 1]
+    range_ = np.linalg.norm(location - pose[:, :2], axis=1)
+
+    d_range_d_x = delta_x / range_
+    d_range_d_y = delta_y / range_
+    d_range_d_psi = np.zeros_like(range_)
+
+    # Calculate the gradient for the bearing measurement
+    d_bearing_d_x = -delta_y / (delta_x**2 + delta_y**2)
+    d_bearing_d_y = delta_x / (delta_x**2 + delta_y**2)
+    d_bearing_d_psi = np.ones_like(range_) * -1
+
+    return np.array([[d_range_d_x, d_range_d_y, d_range_d_psi],
+                     [d_bearing_d_x, d_bearing_d_y, d_bearing_d_psi]]).T.swapaxes(1, 2)
 
 
 def generate_odometry(path, range_noise, angle_noise, range_bias, angle_bias):
@@ -92,7 +110,7 @@ def generate_odometry(path, range_noise, angle_noise, range_bias, angle_bias):
         the original path, just with noise and bias applied. [[x1, y1, psi1], ...]
     """
 
-    odometry = np.array([range_from_location(path[:-1], path[1:, :2]),
+    odometry = np.array([range_bearing_to_location(path[:-1], path[1:, :2])[:, 0],
                          path[1:, 2] - path[:-1, 2]]).T
     odometry[:, 0] += np.random.normal(0, range_noise, odometry.shape[0]) + range_bias
     odometry[:, 1] += np.random.normal(0, angle_noise, odometry.shape[0]) + angle_bias
