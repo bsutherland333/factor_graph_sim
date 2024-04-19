@@ -3,7 +3,7 @@ import numpy as np
 
 def line_path(n_points, start_location, end_location):
     """
-    Generates a straight line path.
+    Generates a straight line path. Poses are returned in interial frame.
 
     Parameters:
     n_points (int): The number of points to generate.
@@ -11,7 +11,7 @@ def line_path(n_points, start_location, end_location):
     end_location (np.array): The ending location of the line. [x, y]
 
     Returns:
-    np.array: The position and heading of the robot along a line path. [[x1, y1, theta1], ... ]
+    np.array: The position and heading of the robot along a line path. [[x1, y1, psi1], ... ]
     """
     position = np.array([start_location + i * (end_location - start_location) / (n_points - 1)
                          for i in range(n_points)])
@@ -36,7 +36,7 @@ def arc_path(n_points, start_location, end_location, angle):
         line between the start and end points.
 
     Returns:
-    np.array: The position and heading of the robot along an arc path. [[x1, y1, theta1], ... ]
+    np.array: The position and heading of the robot along an arc path. [[x1, y1, psi1], ... ]
     """
 
     # Clamp the angle to 0-90 degrees

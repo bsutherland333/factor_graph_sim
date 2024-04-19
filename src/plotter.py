@@ -8,8 +8,8 @@ def plot_field(landmarks=None, estimated_poses=None, true_poses=None,
     Parameters:
     landmarks (np.array): The absolute positions of the landmarks. [[x1, y1], ...]
     estimated_poses (np.array): The positions of the robot's estimated poses. 
-        [[x1, y1, theta1], ...]
-    true_poses (np.array): The positions of the robot's true poses. [[x1, y1, theta1], ...]
+        [[x1, y1, psi1], ...]
+    true_poses (np.array): The positions of the robot's true poses. [[x1, y1, psi1], ...]
     measurement_associations (list): The measurement associations of the robot.
         [[pose_index, landmark_index], ...]
     title (str): The title of the plot.

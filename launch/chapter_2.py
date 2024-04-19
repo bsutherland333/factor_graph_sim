@@ -17,7 +17,7 @@ sys.path.append(parent_dir)
 from landmarks import generate_uniform_random_landmarks
 from plotter import plot_field
 from path import line_path, arc_path
-from measurements import generate_gaussian_measurements, range_from_landmark, bearing_from_landmark
+from measurements import *
 
 import numpy as np
 from scipy.optimize import minimize
@@ -28,7 +28,7 @@ field_range = np.array([[0, 10], [0, 10]])
 landmarks = generate_uniform_random_landmarks(15, field_range)
 path = arc_path(20, np.array([0, 0]), np.array([10, 10]), 30)
 measurements, measurement_associations = generate_gaussian_measurements(path, landmarks, range_std=0.10, bearing_std=0.05, max_range=4)
-
+odometry, odometry_path = generate_odometry(path, range_noise=0.05, angle_noise=0.005, range_bias=0.1, angle_bias=0.01)
 
 # Define the cost function for the solver
 def cost_function(x):
@@ -36,11 +36,11 @@ def cost_function(x):
     Calculate the least squares cost for the robot's pose given the measurements and landmarks.
 
     Parameters:
-    x (np.array): The robot's poses, in meters. [x1, y1, x2, y2, ...]
+    x (np.array): The robot's poses, in meters. [x1, y1, psi1, x2, y2, psi2, ...]
     """
 
     # Reshape the poses into a 2D array
-    x = x.reshape(-1, 2)
+    x = x.reshape(-1, 3)
 
     cost = 0
     for i in range(measurements.shape[0]):
@@ -59,13 +59,13 @@ def cost_function(x):
 
 
 # Solve the least squares problem with scipy
-initial_guess = np.zeros(path.shape[0] * 2)
+initial_guess = odometry_path.flatten()
 result = minimize(cost_function, initial_guess, method='CG')
 print(result)
 
 
 # Plot the results
-x = result.x.reshape(-1, 2)
+x = result.x.reshape(-1, 3)
 plot_field(landmarks=landmarks, true_poses=path, estimated_poses=x,
            measurement_associations=measurement_associations)
 
