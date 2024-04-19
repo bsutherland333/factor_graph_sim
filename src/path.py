@@ -23,11 +23,6 @@ def arc_path(n_points, start_location, end_location, angle):
     """
     Generates an arc path.
 
-    The approach I used here is not great, as dealing with trig in all 4 quadrants with positive
-    and negative curvature is a real pain. If I get bored I should rewrite this to contruct an arc
-    with positive curvature along the x-axis and then flip, rotate, and translate as needed to
-    get it in the right place.
-
     Parameters:
     n_points (int): The number of points to generate.
     start_location (np.array): The starting location of the arc. [x, y]
@@ -38,43 +33,35 @@ def arc_path(n_points, start_location, end_location, angle):
     Returns:
     np.array: The position and heading of the robot along an arc path. [[x1, y1, psi1], ... ]
     """
-
-    # Clamp the angle to 0-90 degrees
-    if angle >= 90 or angle < 0:
-        print('Warning: Arc angles greater than or equal to 90 degrees or less than 0',
-              'are not supported by arc_path, clamping...')
-        angle = np.clip(angle, 0, 89.99999)
+    angle = np.deg2rad(angle)
 
     # If the angle is 0, generate a line path to avoid numerical instability
     if angle == 0:
         return line_path(n_points, start_location, end_location)
 
-    angle = np.deg2rad(angle)
+    x = np.linalg.norm(end_location - start_location) / 2
+    y = x * np.tan(np.abs(angle) - np.pi/2)
+    center = np.array([x, y])
+    radius = np.linalg.norm(center)
 
-    # Calculate the center and radius of the arc
-    radius = np.linalg.norm(end_location - start_location) / (2 * np.sin(angle))
-    angle_from_zero = np.arctan2(end_location[1] - start_location[1],
-                                 end_location[0] - start_location[0]) + angle
-    center_point = start_location + radius * np.array([np.cos(angle_from_zero - np.pi / 2),
-                                                       np.sin(angle_from_zero - np.pi / 2)])
+    start_angle = np.pi/2 + np.abs(angle)
+    end_angle = np.pi/2 - np.abs(angle)
+    delta_angle = (end_angle - start_angle) / (n_points - 1)
 
-    # Calculate the start and end angles
-    start_angle = np.arctan2(start_location[1] - center_point[1],
-                             start_location[0] - center_point[0])
-    end_angle = np.arctan2(end_location[1] - center_point[1],
-                           end_location[0] - center_point[0])
-
-    # Calculate the delta angle per point
-    if np.abs(start_angle - end_angle) > np.pi:
-        delta_angle = -(np.pi*2 - (end_angle - start_angle)) / (n_points - 1)
-    else:
-        delta_angle = (end_angle - start_angle) / (n_points - 1)
-
-    # Generate the points
-    points = np.array([center_point + radius * np.array([np.cos(start_angle + i * delta_angle),
-                                                         np.sin(start_angle + i * delta_angle)])
+    points = np.array([center + radius * np.array([np.cos(start_angle + i * delta_angle),
+                                                   np.sin(start_angle + i * delta_angle)])
                        for i in range(n_points)])
-    heading = np.array([angle_from_zero + i * delta_angle for i in range(n_points)])
-    heading -= np.floor((heading + np.pi) / (2*np.pi)) * 2*np.pi
+    heading = np.array([np.abs(angle) + i * delta_angle for i in range(n_points)])
+
+    # Flip, rotate, and translate the points to the correct location
+    points[:, 1] *= np.sign(angle)
+    heading *= np.sign(angle)
+    rotation_angle = np.arctan2(end_location[1] - start_location[1],
+                                end_location[0] - start_location[0])
+    rotation_matrix = np.array([[np.cos(rotation_angle), -np.sin(rotation_angle)],
+                                [np.sin(rotation_angle), np.cos(rotation_angle)]])
+    points = np.dot(points, rotation_matrix.T) + start_location
+    heading += rotation_angle
 
     return np.column_stack([points, heading])
+
