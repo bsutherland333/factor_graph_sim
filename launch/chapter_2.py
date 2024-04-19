@@ -27,8 +27,8 @@ from scipy.optimize import minimize
 field_range = np.array([[0, 10], [0, 10]])
 landmarks = generate_uniform_random_landmarks(15, field_range)
 path = arc_path(20, np.array([0, 0]), np.array([10, 10]), 30)
-measurements, measurement_associations = generate_gaussian_measurements(path, landmarks, range_std=0.10, bearing_std=0.05, max_range=4)
-odometry, odometry_path = generate_odometry(path, range_noise=0.05, angle_noise=0.005, range_bias=0.1, angle_bias=0.01)
+measurements, measurement_associations = generate_gaussian_measurements(path, landmarks, range_std=0.05, bearing_std=0.005, max_range=4)
+odometry, odometry_path = generate_odometry(path, range_noise=0.03, angle_noise=0.003, range_bias=0.03, angle_bias=0.01)
 
 # Define the cost function for the solver
 def cost_function(x):
@@ -54,6 +54,10 @@ def cost_function(x):
 
         cost += (range_measurement - expected_range)**2 \
                 + (bearing_measurement - expected_bearing)**2
+
+    for i in range(odometry.shape[0]):
+        expected_pose = get_next_pose_from_odom(x[i], odometry[i])
+        cost += np.linalg.norm(x[i + 1] - expected_pose)**2
 
     return cost
 
