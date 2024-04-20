@@ -120,7 +120,7 @@ def bearing_to_location_jacobian(pose, location):
 
     return np.array([[d_bearing_d_x, d_bearing_d_y, d_bearing_d_psi]]).T.swapaxes(1, 2)
 
-def generate_odometry(path, range_noise, angle_noise, range_bias, angle_bias):
+def generate_odometry(path, range_std, angle_std, range_bias, angle_bias):
     """
     Generates odometry measurements for a robot following a path. The measurements are assumed
     to have gaussian noise and a bias in both the distance and angle. Angle measurements returned
@@ -128,8 +128,8 @@ def generate_odometry(path, range_noise, angle_noise, range_bias, angle_bias):
 
     Parameters:
     path (np.array): The robot's path, in meters and radians. [[x1, y1, psi1], ...]
-    range_noise (float): The standard deviation of the range measurements, in meters.
-    angle_noise (float): The standard deviation of the angle measurements, in radians.
+    range_std (float): The standard deviation of the range measurements, in meters.
+    angle_std (float): The standard deviation of the angle measurements, in radians.
     range_bias (float): The bias in the range measurements, in meters.
     angle_bias (float): The bias in the angle measurements, in radians.
 
@@ -143,8 +143,8 @@ def generate_odometry(path, range_noise, angle_noise, range_bias, angle_bias):
 
     odometry = np.array([range_to_location(path[:-1], path[1:, :2]),
                          path[1:, 2] - path[:-1, 2]]).T
-    odometry[:, 0] += np.random.normal(0, range_noise, odometry.shape[0]) + range_bias
-    odometry[:, 1] += np.random.normal(0, angle_noise, odometry.shape[0]) + angle_bias
+    odometry[:, 0] += np.random.normal(0, range_std, odometry.shape[0]) + range_bias
+    odometry[:, 1] += np.random.normal(0, angle_std, odometry.shape[0]) + angle_bias
 
     # Generate a path using the odometry
     odom_path = np.zeros_like(path)

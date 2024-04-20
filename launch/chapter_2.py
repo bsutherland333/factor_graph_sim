@@ -23,59 +23,51 @@ import numpy as np
 from scipy.optimize import minimize
 import time
 
+
 # Set random seed for reproducibility
 np.random.seed(100)
+
+
+# Noise/bias parameters
+measurement_range_std = 0.05
+measurement_bearing_std = 0.05
+odometry_range_bias = 0.03
+odometry_range_std = 0.03
+odometry_angle_bias = 0.003
+odometry_angle_std = 0.003
+
 
 # Generate simulated information for solver
 field_range = np.array([[0, 10], [0, 10]])
 landmarks = generate_uniform_random_landmarks(15, field_range)
-path = arc_path(20, np.array([0, 0]), np.array([10, 10]), 30)
-measurements, measurement_associations = generate_gaussian_measurements(path, landmarks, range_std=0.05, bearing_std=0.005, max_range=4)
-odometry, odometry_path = generate_odometry(path, range_noise=0.03, angle_noise=0.003, range_bias=0.03, angle_bias=0.01)
-
-# Define the cost function for the solver
-def cost_function(x):
-    """
-    Calculate the least squares cost for the robot's pose given the measurements and landmarks.
-
-    Parameters:
-    x (np.array): The robot's poses, in meters. [x1, y1, psi1, x2, y2, psi2, ...]
-    """
-
-    # Reshape the poses into a 2D array
-    x = x.reshape(-1, 3)
-
-    cost = 0
-    for i in range(measurements.shape[0]):
-        landmark = landmarks[measurement_associations[i, 1]]
-        pose = x[measurement_associations[i, 0]]
-        range_measurement = measurements[i, 0]
-        bearing_measurement = measurements[i, 1]
-
-        expected_range = range_to_location(pose.reshape(-1, 3), landmark.reshape(-1, 2))[0]
-        expected_bearing = bearing_to_location(pose.reshape(-1, 3), landmark.reshape(-1, 2))[0]
-
-        cost += (range_measurement - expected_range)**2 \
-                + (bearing_measurement - expected_bearing)**2
-
-    for i in range(odometry.shape[0]):
-        expected_pose = get_next_pose_from_odom(x[i].reshape(-1, 3), odometry[i].reshape(-1, 2))[0]
-        cost += np.linalg.norm(x[i + 1] - expected_pose)**2
-
-    return cost
+path = arc_path(4, np.array([0, 0]), np.array([10, 10]), 30)
+measurements, measurement_associations = \
+        generate_gaussian_measurements(path, landmarks, range_std=measurement_range_std,
+                                       bearing_std=measurement_bearing_std, max_range=4)
+odometry, odometry_path = generate_odometry(path, range_std=odometry_range_std,
+                                            angle_std=odometry_angle_std,
+                                            range_bias=odometry_range_bias,
+                                            angle_bias=odometry_angle_bias)
 
 
-# Solve the least squares problem with scipy
-start_time = time.time()
-initial_guess = odometry_path.flatten()
-result = minimize(cost_function, initial_guess, method='CG')
-runtime = time.time() - start_time
-print(result)
-print(f"Runtime: {runtime:.2f}s, Rate: {1 / runtime:.2f}Hz")
+# Find the linearized least squares problem
+measurement_poses = odometry_path[measurement_associations[:, 0]]
+measurement_landmarks = landmarks[measurement_associations[:, 1]]
+J_ranges = range_to_location_jacobian(measurement_poses, measurement_landmarks)
+A = np.zeros((measurements.shape[0], odometry_path.shape[0] * (odometry_path.shape[1] - 1)))
+for i, j in enumerate(measurement_associations[:, 0]):
+    pose_idx = j * 2
+    A[i, pose_idx:pose_idx + 2] = J_ranges[i, 0, :2]
+A = A / measurement_range_std
+b = (measurements[:, 0] - range_to_location(measurement_poses, measurement_landmarks)).reshape(-1, 1) / measurement_range_std
+
+
+# Solve the least squares problem
+delta = np.linalg.solve(A.T @ A, A.T @ b).reshape(-1, 2)
+x = odometry_path[:, :2] + delta
 
 
 # Plot the results
-x = result.x.reshape(-1, 3)
 plot_field(landmarks=landmarks, true_poses=path, estimated_poses=x,
            measurement_associations=measurement_associations)
 
