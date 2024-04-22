@@ -20,7 +20,6 @@ from path import *
 from measurements import *
 
 import numpy as np
-from scipy.optimize import minimize
 import time
 
 
