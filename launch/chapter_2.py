@@ -25,6 +25,7 @@ import time
 
 # Set random seed for reproducibility
 np.random.seed(11)
+# TODO: Problem will fail to compute if a pose does not have enough measurements for a solution
 
 
 # Noise/bias parameters
@@ -52,25 +53,25 @@ plot_field(landmarks=landmarks, true_poses=path, estimated_poses=x[:, :2],
            measurement_associations=measurement_associations, title='Initial Odometry')
 
 
+start_time = time.time()
 for iter in range(50):
-    x = x[:, :2]
     # Find the linearized least squares problem
     measurement_poses = x[measurement_associations[:, 0]]
     measurement_landmarks = landmarks[measurement_associations[:, 1]]
     J_ranges = range_to_location_jacobian(measurement_poses, measurement_landmarks)
-    #J_bearings = bearing_to_location_jacobian(measurement_poses, measurement_landmarks)
+    J_bearings = bearing_to_location_jacobian(measurement_poses, measurement_landmarks)
     #J_odom_ranges = range_to_location_jacobian(x[:-1, :2], x[1:, :2])
 
     pose_size = x.shape[1]
     #num_measurements = measurements.shape[0]*2 + odometry.shape[0]
-    num_measurements = measurements.shape[0]
+    num_measurements = measurements.shape[0]*2
     num_states = x.shape[0] * pose_size
     A = np.zeros((num_measurements, num_states))
     for i, j in enumerate(measurement_associations[:, 0]):
         pose_idx = j * pose_size
-        A[i, pose_idx:pose_idx + pose_size] = J_ranges[i, 0, :2] / measurement_range_std
-    #    A[i + measurements.shape[0], pose_idx:pose_idx + pose_size] = \
-    #            J_bearings[i, 0] / measurement_bearing_std
+        A[i, pose_idx:pose_idx + pose_size] = J_ranges[i, 0,] / measurement_range_std
+        A[i + measurements.shape[0], pose_idx:pose_idx + pose_size] = \
+                J_bearings[i, 0] / measurement_bearing_std
     #for i in range(odometry.shape[0]):
     #    pose_idx = i * pose_size
     #    A[i + measurements.shape[0]*2, pose_idx:pose_idx + pose_size] = \
@@ -78,13 +79,12 @@ for iter in range(50):
 
     b_ranges = (measurements[:, 0] - range_to_location(measurement_poses, \
             measurement_landmarks)).reshape(-1, 1) / measurement_range_std
-    #b_bearings = (measurements[:, 1] - bearing_to_location(measurement_poses, \
-    #        measurement_landmarks)).reshape(-1, 1) / measurement_bearing_std
+    b_bearings = (measurements[:, 1] - bearing_to_location(measurement_poses, \
+            measurement_landmarks)).reshape(-1, 1) / measurement_bearing_std
     #b_odom_ranges = (odometry[:, 0] - range_to_location(x[:-1, :2], x[1:, :2])).reshape(-1, 1) \
     #        / odometry_range_std
 
-    #b = np.vstack((b_ranges, b_bearings, b_odom_ranges))
-    b = b_ranges
+    b = np.vstack((b_ranges, b_bearings))
 
     # Solve the least squares problem
     information_matrix = A.T @ A
@@ -92,6 +92,10 @@ for iter in range(50):
     y = np.linalg.solve(R.T, A.T @ b)
     delta = np.linalg.solve(R, y)
     x += delta.reshape(-1, pose_size)
+
+# Print the time
+end_time = time.time()
+print(f'Completed in {end_time - start_time}s, a rate of {1 / (end_time - start_time)}Hz')
 
 
 # Plot the results
