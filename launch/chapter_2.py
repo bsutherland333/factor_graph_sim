@@ -43,34 +43,46 @@ path = arc_path(20, np.array([0, 0]), np.array([10, 10]), 30)
 measurements, measurement_associations = \
         generate_gaussian_measurements(path, landmarks, range_std=measurement_range_std,
                                        bearing_std=measurement_bearing_std, max_range=4)
-odometry, odometry_path = generate_odometry(path, range_std=odometry_range_std,
-                                            angle_std=odometry_angle_std,
-                                            range_bias=odometry_range_bias,
-                                            angle_bias=odometry_angle_bias)
+odometry, x = generate_odometry(path, range_std=odometry_range_std,
+                                angle_std=odometry_angle_std,
+                                range_bias=odometry_range_bias,
+                                angle_bias=odometry_angle_bias)
 
+for iter in range(2):
+    # Find the linearized least squares problem
+    measurement_poses = x[measurement_associations[:, 0]]
+    measurement_landmarks = landmarks[measurement_associations[:, 1]]
+    J_ranges = range_to_location_jacobian(measurement_poses, measurement_landmarks)
+    J_bearings = bearing_to_location_jacobian(measurement_poses, measurement_landmarks)
+    J_odom_ranges = range_to_location_jacobian(x[:-1, :2], x[1:, :2])
+    J_odom_ranges
 
-# Find the linearized least squares problem
-measurement_poses = odometry_path[measurement_associations[:, 0]]
-measurement_landmarks = landmarks[measurement_associations[:, 1]]
-J_ranges = range_to_location_jacobian(measurement_poses, measurement_landmarks)
-J_bearings = bearing_to_location_jacobian(measurement_poses, measurement_landmarks)
+    pose_size = x.shape[1]
+    num_measurements = measurements.shape[0]*2 + odometry.shape[0]
+    num_states = x.shape[0] * pose_size
+    A = np.zeros((num_measurements, num_states))
+    for i, j in enumerate(measurement_associations[:, 0]):
+        pose_idx = j * pose_size
+        A[i, pose_idx:pose_idx + pose_size] = J_ranges[i, 0] / measurement_range_std
+        A[i + measurements.shape[0], pose_idx:pose_idx + pose_size] = \
+                J_bearings[i, 0] / measurement_bearing_std
+    for i in range(odometry.shape[0]):
+        pose_idx = i * pose_size
+        A[i + measurements.shape[0]*2, pose_idx:pose_idx + pose_size] = \
+                J_odom_ranges[i, 0] / odometry_range_std
 
-pose_length = odometry_path.shape[1]
-A = np.zeros((measurements.shape[0]*2, odometry_path.shape[0] * pose_length))
-for i, j in enumerate(measurement_associations[:, 0]):
-    pose_idx = j * pose_length
-    A[i, pose_idx:pose_idx + pose_length] = J_ranges[i, 0] / measurement_range_std
-    A[i + measurements.shape[0], pose_idx:pose_idx + pose_length] = \
-            J_bearings[i, 0] / measurement_bearing_std
+    b_ranges = (measurements[:, 0] - range_to_location(measurement_poses, \
+            measurement_landmarks)).reshape(-1, 1) / measurement_range_std
+    b_bearings = (measurements[:, 1] - bearing_to_location(measurement_poses, \
+            measurement_landmarks)).reshape(-1, 1) / measurement_bearing_std
+    b_odom_ranges = (odometry[:, 0] - range_to_location(x[:-1, :2], x[1:, :2])).reshape(-1, 1) \
+            / odometry_range_std
 
-b_ranges = (measurements[:, 0] - range_to_location(measurement_poses, measurement_landmarks)).reshape(-1, 1) / measurement_range_std
-b_bearings = (measurements[:, 1] - bearing_to_location(measurement_poses, measurement_landmarks)).reshape(-1, 1) / measurement_bearing_std
+    b = np.vstack((b_ranges, b_bearings, b_odom_ranges))
 
-b = np.vstack((b_ranges, b_bearings))
-
-# Solve the least squares problem
-delta = np.linalg.solve(A.T @ A, A.T @ b).reshape(-1, pose_length)
-x = odometry_path + delta
+    # Solve the least squares problem
+    delta = np.linalg.solve(A.T @ A, A.T @ b).reshape(-1, pose_size)
+    x += delta
 
 
 # Plot the results
