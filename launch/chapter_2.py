@@ -61,6 +61,9 @@ for iter in range(50):
     J_ranges = range_to_location_jacobian(measurement_poses, measurement_landmarks)
     J_bearings = bearing_to_location_jacobian(measurement_poses, measurement_landmarks)
     #J_odom_ranges = range_to_location_jacobian(x[:-1, :2], x[1:, :2])
+    # TODO: Including odometry causes the solution to diverge. This is probably because of an
+    #  an incorrect jacobian, as the previous and next point affect the measurements, not just
+    #  the previous.
 
     pose_size = x.shape[1]
     #num_measurements = measurements.shape[0]*2 + odometry.shape[0]
