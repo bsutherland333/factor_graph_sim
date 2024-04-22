@@ -25,22 +25,22 @@ import time
 
 
 # Set random seed for reproducibility
-np.random.seed(100)
+np.random.seed(11)
 
 
 # Noise/bias parameters
-measurement_range_std = 0.05
+measurement_range_std = 0.1
 measurement_bearing_std = 0.05
-odometry_range_bias = 0.03
-odometry_range_std = 0.03
-odometry_angle_bias = 0.003
-odometry_angle_std = 0.003
+odometry_range_bias = 0.05
+odometry_range_std = 0.05
+odometry_angle_bias = 0.05
+odometry_angle_std = 0.05
 
 
 # Generate simulated information for solver
 field_range = np.array([[0, 10], [0, 10]])
 landmarks = generate_uniform_random_landmarks(15, field_range)
-path = arc_path(4, np.array([0, 0]), np.array([10, 10]), 30)
+path = arc_path(20, np.array([0, 0]), np.array([10, 10]), 30)
 measurements, measurement_associations = \
         generate_gaussian_measurements(path, landmarks, range_std=measurement_range_std,
                                        bearing_std=measurement_bearing_std, max_range=4)
