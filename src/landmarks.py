@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def generate_uniform_random_landmarks(n_landmarks, field_range):
     """
     Generates a set of random landmarks uniformly distributed across the field (non-Gaussian).

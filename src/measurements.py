@@ -120,6 +120,7 @@ def bearing_to_location_jacobian(pose, location):
 
     return np.array([[d_bearing_d_x, d_bearing_d_y, d_bearing_d_psi]]).T.swapaxes(1, 2)
 
+
 def generate_odometry(path, range_std, angle_std, range_bias, angle_bias):
     """
     Generates odometry measurements for a robot following a path. The measurements are assumed
@@ -161,7 +162,7 @@ def get_next_pose_from_odom(pose, odometry):
     Calculate the next pose of the robot given the current pose and odometry measurements.
 
     NOTE: This function assumes the robot will follow an arc inbetween poses. As long as each pose
-    is close enought to the next then this should be a good assumption.
+    is close enough to the next then this should be a good assumption.
 
     Parameters:
     pose (np.array): The robot's current pose, in meters and radians. [[x1, y1, psi1], ...]
@@ -173,4 +174,3 @@ def get_next_pose_from_odom(pose, odometry):
     return np.array([pose[:, 0] + odometry[:, 0] * np.cos(pose[:, 2] + odometry[:, 1]*0.5),
                      pose[:, 1] + odometry[:, 0] * np.sin(pose[:, 2] + odometry[:, 1]*0.5),
                      pose[:, 2] + odometry[:, 1]]).T
-

@@ -3,7 +3,7 @@ This script constructs a basic SLAM-like problem where a robot moves through a f
 range and bearing measurements to known landmarks. The robot's pose is estimated by using scipy to
 minimize a least squares cost function.
 
-The problem is solved simultaneously rather than iteratively, no sparsity explotation is used,
+The problem is solved simultaneously rather than iteratively, no sparsity exploitation is used,
 no special solvers are applied.
 """
 
@@ -49,8 +49,7 @@ odometry, x = generate_odometry(path, range_std=odometry_range_std,
                                 range_bias=odometry_range_bias,
                                 angle_bias=odometry_angle_bias)
 
-plot_field(landmarks=landmarks, true_poses=path, estimated_poses=x[:, :2],
-           measurement_associations=measurement_associations, title='Initial Odometry')
+plot_field(landmarks=landmarks, true_poses=path, estimated_poses=x[:, :2], title='Initial Odometry')
 
 
 start_time = time.time()

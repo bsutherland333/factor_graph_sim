@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 
+
 def plot_field(landmarks=None, estimated_poses=None, true_poses=None, 
                measurement_associations=None, title=None):
     """
@@ -51,4 +52,3 @@ def plot_field(landmarks=None, estimated_poses=None, true_poses=None,
     plt.xlabel('X')
     plt.ylabel('Y')
     plt.show()
-

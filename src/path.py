@@ -3,7 +3,7 @@ import numpy as np
 
 def line_path(n_points, start_location, end_location):
     """
-    Generates a straight line path. Poses are returned in interial frame.
+    Generates a straight line path. Poses are returned in intertial frame.
 
     Parameters:
     n_points (int): The number of points to generate.
@@ -99,4 +99,3 @@ def sine_path(n_points, start_location, end_location, amplitude, n_periods):
     heading += rotation_angle
 
     return np.column_stack([points, heading])
-
