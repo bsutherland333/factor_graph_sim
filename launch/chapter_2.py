@@ -23,10 +23,10 @@ import numpy as np
 import time
 
 
-# Set random seed for reproducibility
-np.random.seed(11)
-# TODO: Problem will fail to compute if a pose does not have enough measurements for a solution
+MIN_MEASUREMENTS = 2
 
+np.random.seed(11)
+np.set_printoptions(linewidth=np.inf, threshold=np.inf)
 
 # Noise/bias parameters
 measurement_range_std = 0.1     # m
@@ -35,7 +35,6 @@ odometry_range_bias = 0.05      # m
 odometry_range_std = 0.05       # m
 odometry_angle_bias = 0.05      # rad
 odometry_angle_std = 0.05       # rad
-
 
 # Generate simulated information for solver
 field_range = np.array([[0, 10], [0, 10]])
@@ -51,7 +50,20 @@ odometry, x = generate_odometry(path, range_std=odometry_range_std,
 
 plot_field(landmarks=landmarks, true_poses=path, estimated_poses=x[:, :2], title='Initial Odometry')
 
+# Remove any states that have less than the minimum number of measurements, as they cannot be solved
+measurement_counts = np.bincount(measurement_associations[:, 0])
+pad_length = x.shape[0] - measurement_counts.shape[0]
+measurement_counts = np.pad(measurement_counts, (0, pad_length), 'constant')
+invalid_states = np.where(measurement_counts < MIN_MEASUREMENTS)[0]
+invalid_measurements = np.where(np.isin(measurement_associations[:, 0], invalid_states))[0]
+x = np.delete(x, invalid_states, axis=0)
+measurement_associations = np.delete(measurement_associations, invalid_measurements, axis=0)
+measurements = np.delete(measurements, invalid_measurements, axis=0)
+for i in range(invalid_states.shape[0]):
+    measurement_associations[measurement_associations[:, 0] > invalid_states[i], 0] -= 1
+    invalid_states -= 1
 
+# Solve the problem
 start_time = time.time()
 for iter in range(50):
     # Find the linearized least squares problem
