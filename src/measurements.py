@@ -135,11 +135,9 @@ def generate_odometry(path, range_std, angle_std, range_bias, angle_bias):
     angle_bias (float): The bias in the angle measurements, in radians.
 
     Returns:
-    np.array: The odometry measurements for the robot. Each measurement is for the current point,
-        specifying the odometry to the next point. As such, there will be no measurement for the
-        last point in the path. [[range1, angle1], ...]
-    np.array: The path generated using the odometry measurements. This will in the same format as
-        the original path, just with noise and bias applied. [[x1, y1, psi1], ...]
+    np.array: The odometry measurements for the robot. Each measurement is for the second point in
+        a pair, specifying the odometry from the previous point. As such, there will be no
+        measurement for the first point in the path. [[range1, angle1], ...]
     """
 
     odometry = np.array([range_to_location(path[:-1], path[1:, :2]),
@@ -147,19 +145,33 @@ def generate_odometry(path, range_std, angle_std, range_bias, angle_bias):
     odometry[:, 0] += np.random.normal(0, range_std, odometry.shape[0]) + range_bias
     odometry[:, 1] += np.random.normal(0, angle_std, odometry.shape[0]) + angle_bias
 
-    # Generate a path using the odometry
-    odom_path = np.zeros_like(path)
-    odom_path[0] = path[0]
-    for i in range(1, path.shape[0]):
-        odom_path[i] = get_next_pose_from_odom(odom_path[i - 1].reshape(-1, 3),
-                                               odometry[i - 1].reshape(-1, 2))[0]
+    return odometry
 
-    return odometry, odom_path
+
+def get_path_from_odometry(x0, odometry):
+    """
+    Generate a path from the initial pose and odometry measurements.
+
+    Parameters:
+    x0 (np.array): The initial pose of the robot, in meters and radians. [x, y, psi]
+    odometry (np.array): The odometry measurements, in meters and radians. [[range1, angle1], ...]
+
+    Returns:
+    np.array: The path generated using the odometry measurements. [[x1, y1, psi1], ...]
+    """
+
+    path = np.zeros((odometry.shape[0] + 1, 3))
+    path[0] = x0
+    for i in range(1, path.shape[0]):
+        path[i] = get_next_pose_from_odom(path[i - 1].reshape(-1, 3),
+                                          odometry[i - 1].reshape(-1, 2))[0]
+
+    return path
 
 
 def get_next_pose_from_odom(pose, odometry):
     """
-    Calculate the next pose of the robot given the current pose and odometry measurements.
+    Calculate the next pose of the robot given the current pose and next set odometry measurements.
 
     NOTE: This function assumes the robot will follow an arc inbetween poses. As long as each pose
     is close enough to the next then this should be a good assumption.

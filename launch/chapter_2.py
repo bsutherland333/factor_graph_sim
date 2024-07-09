@@ -43,12 +43,14 @@ path = arc_path(20, np.array([0, 0]), np.array([10, 10]), 30)
 measurements, measurement_associations = \
         generate_gaussian_measurements(path, landmarks, range_std=measurement_range_std,
                                        bearing_std=measurement_bearing_std, max_range=4)
-odometry, x = generate_odometry(path, range_std=odometry_range_std,
-                                angle_std=odometry_angle_std,
-                                range_bias=odometry_range_bias,
-                                angle_bias=odometry_angle_bias)
+odometry = generate_odometry(path, range_std=odometry_range_std,
+                             angle_std=odometry_angle_std,
+                             range_bias=odometry_range_bias,
+                             angle_bias=odometry_angle_bias)
+x = get_path_from_odometry(path[0], odometry)
 
-plot_field(landmarks=landmarks, true_poses=path, estimated_poses=x[:, :2], title='Initial Odometry')
+plot_field(landmarks=landmarks, true_poses=path, estimated_poses=x[:, :2],
+           measurement_associations=measurement_associations, title='Initial Odometry')
 
 # Remove any states that have less than the minimum number of measurements, as they cannot be solved
 measurement_counts = np.bincount(measurement_associations[:, 0])
