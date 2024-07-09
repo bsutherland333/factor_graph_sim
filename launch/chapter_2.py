@@ -68,14 +68,11 @@ for i in range(invalid_states.shape[0]):
 # Solve the problem
 start_time = time.time()
 for iter in range(50):
-    # Find the linearized least squares problem
+    # Find the linearized least-squares problem
     measurement_poses = x[measurement_associations[:, 0]]
     measurement_landmarks = landmarks[measurement_associations[:, 1]]
     J_ranges = range_to_location_jacobian(measurement_poses, measurement_landmarks)
     J_bearings = bearing_to_location_jacobian(measurement_poses, measurement_landmarks)
-    # TODO: Including odometry causes the solution to diverge. This is probably because of an
-    #  an incorrect jacobian, as the previous and next point affect the measurements, not just
-    #  the previous.
     J_odom_ranges = range_to_location_jacobian(x[:-1, :], x[1:, :2])
     J_odom_bearings = bearing_to_location_jacobian(x[:-1, :], x[1:, :2])
 
@@ -99,9 +96,10 @@ for iter in range(50):
             measurement_landmarks)).reshape(-1, 1) / measurement_range_std
     b_bearings = (measurements[:, 1] - bearing_to_location(measurement_poses, \
             measurement_landmarks)).reshape(-1, 1) / measurement_bearing_std
-    b_odom_ranges = (odometry[:, 0] - range_to_location(x[:-1, :], x[1:, :2])).reshape(-1, 1) \
+    expected_odometry = generate_odometry(x, 0, 0, 0, 0)
+    b_odom_ranges = (odometry[:, 0] - expected_odometry[:, 0]).reshape(-1, 1) \
             / odometry_range_std
-    b_odom_bearings = (odometry[:, 1] - bearing_to_location(x[:-1, :], x[1:, :2])*2).reshape(-1, 1) \
+    b_odom_bearings = (odometry[:, 1] - expected_odometry[:, 1]).reshape(-1, 1) \
             / odometry_angle_std
 
     b = np.vstack((b_ranges, b_bearings, b_odom_ranges, b_odom_bearings))
