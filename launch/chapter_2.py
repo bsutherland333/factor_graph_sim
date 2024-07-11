@@ -24,7 +24,7 @@ import numpy as np
 import time
 
 
-np.random.seed(0)
+np.random.seed(2)
 np.set_printoptions(linewidth=np.inf, threshold=np.inf)
 
 # Noise/bias parameters
@@ -55,7 +55,8 @@ plot_field(landmarks=landmarks, true_poses=path, estimated_poses=x[:, :2],
 
 # Solve the problem
 start_time = time.time()
-for iter in range(50):
+iter = 0
+while True:
     # Find the linearized least-squares problem
     measurement_poses = x[measurement_associations[:, 0]]
     measurement_landmarks = landmarks[measurement_associations[:, 1]]
@@ -97,15 +98,19 @@ for iter in range(50):
 
     # Solve the least squares problem
     x_prev = x.copy()
-    x = cholesky_factorization(A, b, x)
+    x = numpy_lstsq(A, b, x)
 
     # Check for convergence
     if np.linalg.norm(x - x_prev) < 1e-3:
+        print(f'Converged after {iter} iterations')
+        break
+    iter += 1
+    if iter > 100:
+        print('Failed to converge')
         break
 
 # Print the time
 end_time = time.time()
-print(f'Final state: {x}')
 print(f'Completed in {end_time - start_time}s, a rate of {1 / (end_time - start_time)}Hz')
 print(f'Final error: {np.linalg.norm(path - x, axis=1).sum()}')
 
