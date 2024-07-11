@@ -20,6 +20,9 @@ def cholesky_factorization(A, b, x):
     """
     Perform a Cholesky factorization to solve a linear system of equations.
 
+    Note that this method requires that the matrix A is positive definite, making it a
+    bit of a pain to use sometime.
+
     Parameters:
     A (np.array): The collected and whitened Jacobian matrix.
     b (np.array): The collected and whitened residual vector

@@ -24,7 +24,7 @@ import numpy as np
 import time
 
 
-np.random.seed(11)
+np.random.seed(0)
 np.set_printoptions(linewidth=np.inf, threshold=np.inf)
 
 # Noise/bias parameters
@@ -46,6 +46,8 @@ odometry = generate_odometry(path, range_std=odometry_range_std,
                              angle_std=odometry_angle_std,
                              range_bias=odometry_range_bias,
                              angle_bias=odometry_angle_bias)
+x0 = path[0]
+x0_std = 1e-6
 x = get_path_from_odometry(path[0], odometry)
 
 plot_field(landmarks=landmarks, true_poses=path, estimated_poses=x[:, :2],
@@ -64,7 +66,7 @@ for iter in range(50):
 
     # Construct the whitened Jacobian matrix
     pose_size = x.shape[1]
-    num_measurements = measurements.shape[0]*2 + odometry.shape[0]*2
+    num_measurements = measurements.shape[0]*2 + odometry.shape[0]*2 + pose_size
     num_states = x.shape[0] * pose_size
     A = np.zeros((num_measurements, num_states))
     for i, j in enumerate(measurement_associations[:, 0]):
@@ -78,6 +80,7 @@ for iter in range(50):
                 J_odom_ranges[i, 0] / odometry_range_std
         A[i + measurements.shape[0]*2 + odometry.shape[0], pose_idx:pose_idx + 2*pose_size] = \
                 J_odom_bearings[i, 0] / odometry_angle_std
+    A[-pose_size:, :pose_size] = -np.diag(np.ones(pose_size)) / x0_std
 
     # Construct the whitened residual vector
     b_ranges = (measurements[:, 0] - range_to_location(measurement_poses, \
@@ -89,7 +92,8 @@ for iter in range(50):
             / odometry_range_std
     b_odom_bearings = (odometry[:, 1] - expected_odometry[:, 1]).reshape(-1, 1) \
             / odometry_angle_std
-    b = np.vstack((b_ranges, b_bearings, b_odom_ranges, b_odom_bearings))
+    b_x0 = (x[0] - x0).reshape(-1, 1) / x0_std
+    b = np.vstack((b_ranges, b_bearings, b_odom_ranges, b_odom_bearings, b_x0))
 
     # Solve the least squares problem
     x_prev = x.copy()
@@ -101,6 +105,7 @@ for iter in range(50):
 
 # Print the time
 end_time = time.time()
+print(f'Final state: {x}')
 print(f'Completed in {end_time - start_time}s, a rate of {1 / (end_time - start_time)}Hz')
 print(f'Final error: {np.linalg.norm(path - x, axis=1).sum()}')
 
