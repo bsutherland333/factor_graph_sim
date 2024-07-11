@@ -3,8 +3,15 @@ This script constructs a basic SLAM-like problem where a robot moves through a f
 range and bearing measurements to known landmarks. The robot's pose is estimated by using scipy to
 minimize a least squares cost function.
 
-The problem is solved simultaneously rather than iteratively, no sparsity exploitation is used,
-no special solvers are applied.
+TODO:
+ Right now, poses with odometry only information are not solving like I would expect. I would think I would see
+ estimates at least as good as dead reckoning, but that isn't the case. I believe this is related to the odometry
+ bearing jacobian, as the range jacobian produces solutions I would expect when left by itself. At the very least,
+ including the bearing odometry measurements seems to improve the solution, just not as well as it should.
+
+ It is possible that the jacobian is correct, just that the solver isn't able to converge to the correct solution since
+ odometry measurements are all dependent on each other in a chain. This might be the case actually... I wonder what
+ would happen if I gave the solver perfect odometry and a perfect initial guess and with no other measurements?
 """
 
 import os
