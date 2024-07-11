@@ -23,13 +23,16 @@ import numpy as np
 import time
 
 
-MIN_MEASUREMENTS = 2
+USE_RANGE = True
+USE_BEARING = True
+USE_RANGE_ODOM = True
+USE_BEARING_ODOM = True
 
 np.random.seed(11)
 np.set_printoptions(linewidth=np.inf, threshold=np.inf)
 
 # Noise/bias parameters
-measurement_range_std = 0.1     # m
+measurement_range_std = 0.01    # m
 measurement_bearing_std = 0.05  # rad
 odometry_range_bias = 0.05      # m
 odometry_range_std = 0.05       # m
@@ -52,19 +55,6 @@ x = get_path_from_odometry(path[0], odometry)
 plot_field(landmarks=landmarks, true_poses=path, estimated_poses=x[:, :2],
            measurement_associations=measurement_associations, title='Initial Odometry')
 
-# Remove any states that have less than the minimum number of measurements, as they cannot be solved
-measurement_counts = np.bincount(measurement_associations[:, 0])
-pad_length = x.shape[0] - measurement_counts.shape[0]
-measurement_counts = np.pad(measurement_counts, (0, pad_length), 'constant')
-invalid_states = np.where(measurement_counts < MIN_MEASUREMENTS)[0]
-invalid_measurements = np.where(np.isin(measurement_associations[:, 0], invalid_states))[0]
-x = np.delete(x, invalid_states, axis=0)
-measurement_associations = np.delete(measurement_associations, invalid_measurements, axis=0)
-measurements = np.delete(measurements, invalid_measurements, axis=0)
-for i in range(invalid_states.shape[0]):
-    measurement_associations[measurement_associations[:, 0] > invalid_states[i], 0] -= 1
-    invalid_states -= 1
-
 # Solve the problem
 start_time = time.time()
 for iter in range(50):
@@ -73,8 +63,8 @@ for iter in range(50):
     measurement_landmarks = landmarks[measurement_associations[:, 1]]
     J_ranges = range_to_location_jacobian(measurement_poses, measurement_landmarks)
     J_bearings = bearing_to_location_jacobian(measurement_poses, measurement_landmarks)
-    J_odom_ranges = range_to_location_jacobian(x[:-1, :], x[1:, :2])
-    J_odom_bearings = bearing_to_location_jacobian(x[:-1, :], x[1:, :2])
+    J_odom_ranges = odom_range_jacobian(x)
+    J_odom_bearings = odom_bearing_jacobian(x)
 
     pose_size = x.shape[1]
     num_measurements = measurements.shape[0]*2 + odometry.shape[0]*2
@@ -82,15 +72,19 @@ for iter in range(50):
     A = np.zeros((num_measurements, num_states))
     for i, j in enumerate(measurement_associations[:, 0]):
         pose_idx = j * pose_size
-        A[i, pose_idx:pose_idx + pose_size] = J_ranges[i, 0,] / measurement_range_std
-        A[i + measurements.shape[0], pose_idx:pose_idx + pose_size] = \
-                J_bearings[i, 0] / measurement_bearing_std
+        if USE_RANGE:
+            A[i, pose_idx:pose_idx + pose_size] = J_ranges[i, 0,] / measurement_range_std
+        if USE_BEARING:
+            A[i + measurements.shape[0], pose_idx:pose_idx + pose_size] = \
+                    J_bearings[i, 0] / measurement_bearing_std
     for i in range(odometry.shape[0]):
         pose_idx = i * pose_size
-        A[i + measurements.shape[0]*2, pose_idx:pose_idx + pose_size] = \
-                J_odom_ranges[i, 0] / odometry_range_std
-        A[i + measurements.shape[0]*2 + odometry.shape[0], pose_idx:pose_idx + pose_size] = \
-                J_odom_bearings[i, 0] / odometry_angle_std
+        if USE_RANGE_ODOM:
+            A[i + measurements.shape[0]*2, pose_idx:pose_idx + 2*pose_size] = \
+                    J_odom_ranges[i, 0] / odometry_range_std
+        if USE_BEARING_ODOM:
+            A[i + measurements.shape[0]*2 + odometry.shape[0], pose_idx:pose_idx + 2*pose_size] = \
+                    J_odom_bearings[i, 0] / odometry_angle_std
 
     b_ranges = (measurements[:, 0] - range_to_location(measurement_poses, \
             measurement_landmarks)).reshape(-1, 1) / measurement_range_std
@@ -114,6 +108,7 @@ for iter in range(50):
 # Print the time
 end_time = time.time()
 print(f'Completed in {end_time - start_time}s, a rate of {1 / (end_time - start_time)}Hz')
+print(f'Final error: {np.linalg.norm(path - x, axis=1).sum()}')
 
 
 # Plot the results

@@ -125,7 +125,7 @@ def generate_odometry(path, range_std, angle_std, range_bias, angle_bias):
     """
     Generates odometry measurements for a robot following a path. The measurements are assumed
     to have gaussian noise and a bias in both the distance and angle. Angle measurements returned
-    are based on the change in heading in body frame.
+    are based on the change in heading in body frame, which is a relative measurement.
 
     Parameters:
     path (np.array): The robot's path, in meters and radians. [[x1, y1, psi1], ...]
@@ -186,3 +186,60 @@ def get_next_pose_from_odom(pose, odometry):
     return np.array([pose[:, 0] + odometry[:, 0] * np.cos(pose[:, 2] + odometry[:, 1]*0.5),
                      pose[:, 1] + odometry[:, 0] * np.sin(pose[:, 2] + odometry[:, 1]*0.5),
                      pose[:, 2] + odometry[:, 1]]).T
+
+
+def odom_range_jacobian(pose):
+    """
+    Calculates the jacobian of the range odometry measurements for each pair of poses.
+
+    Parameters:
+    pose (np.array): The robot's poses, in meters and radians. [[x1, y1, psi1], ...]
+
+    Returns:
+    np.array: The jacobian of the range odometry measurements. [[[d_range/d_x1, d_range/d_y1, d_range/d_psi1,
+                                                                  d_range/d_x2, d_range/d_y2, d_range/d_psi2]], ...]
+    """
+
+    range = np.linalg.norm(pose[:-1, :2] - pose[1:, :2], axis=1)
+    dr_dx1 = (pose[:-1, 0] - pose[1:, 0]) / range
+    dr_dx2 = -dr_dx1
+    dr_dy1 = (pose[:-1, 1] - pose[1:, 1]) / range
+    dr_dy2 = -dr_dy1
+    dr_psi = np.zeros_like(range)
+
+    return np.array([[dr_dx1, dr_dy1, dr_psi, dr_dx2, dr_dy2, dr_psi]]).T.swapaxes(1, 2)
+
+
+def odom_bearing_jacobian(pose):
+    """
+    Calculates the jacobian of the bearing odometry measurements for each pair of poses.
+
+    This jacobian makes use of the assumption that the robot follows an arc between poses and that the heading of the
+    robot will be tangent to this arc. This enables the change in heading to be depended on the change in position.
+    This dependency allows for solving for poses of the robot that have no measurements, as long as the previous pose is
+    known.
+
+    Parameters:
+    pose (np.array): The robot's poses, in meters and radians. [[x1, y1, psi1], ...]
+
+    Returns:
+    np.array: The jacobian of the bearing odometry measurements. [[[d_bearing/d_x1, d_bearing/d_y1, d_bearing/d_psi1],
+                                                                   [d_bearing/d_x2, d_bearing/d_y2, d_bearing/d_psi2]],
+                                                                   ...]
+    """
+
+    x1 = pose[:-1, 0]
+    x2 = pose[1:, 0]
+    y1 = pose[:-1, 1]
+    y2 = pose[1:, 1]
+    delta_x = x2 - x1
+    delta_y = y2 - y1
+
+    db_dx1 = 2*delta_y / (x1**2 + x2**2 - 2*x1*x2 + delta_y**2)
+    db_dx2 = -2*delta_y / (x1**2 + x2**2 - 2*x1*x2 + delta_y**2)
+    db_dy1 = -2*delta_x / (x1**2 + x2**2 - 2*x1*x2 + y1**2 + y2**2 - 2*y1*y2)
+    db_dy2 = 2*delta_x / (x1**2 + x2**2 - 2*x1*x2 + y1**2 + y2**2 - 2*y1*y2)
+    db_dpsi1 = np.ones_like(delta_x) * -2
+    db_dpsi2 = np.zeros_like(delta_x)
+
+    return np.array([[db_dx1, db_dy1, db_dpsi1, db_dx2, db_dy2, db_dpsi2]]).T.swapaxes(1, 2)
