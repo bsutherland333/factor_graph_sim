@@ -18,15 +18,11 @@ from landmarks import generate_uniform_random_landmarks
 from plotter import plot_field
 from path import *
 from measurements import *
+from non_sparse_solvers import *
 
 import numpy as np
 import time
 
-
-USE_RANGE = True
-USE_BEARING = True
-USE_RANGE_ODOM = True
-USE_BEARING_ODOM = True
 
 np.random.seed(11)
 np.set_printoptions(linewidth=np.inf, threshold=np.inf)
@@ -66,26 +62,24 @@ for iter in range(50):
     J_odom_ranges = odom_range_jacobian(x)
     J_odom_bearings = odom_bearing_jacobian(x)
 
+    # Construct the whitened Jacobian matrix
     pose_size = x.shape[1]
     num_measurements = measurements.shape[0]*2 + odometry.shape[0]*2
     num_states = x.shape[0] * pose_size
     A = np.zeros((num_measurements, num_states))
     for i, j in enumerate(measurement_associations[:, 0]):
         pose_idx = j * pose_size
-        if USE_RANGE:
-            A[i, pose_idx:pose_idx + pose_size] = J_ranges[i, 0,] / measurement_range_std
-        if USE_BEARING:
-            A[i + measurements.shape[0], pose_idx:pose_idx + pose_size] = \
-                    J_bearings[i, 0] / measurement_bearing_std
+        A[i, pose_idx:pose_idx + pose_size] = J_ranges[i, 0,] / measurement_range_std
+        A[i + measurements.shape[0], pose_idx:pose_idx + pose_size] = \
+                J_bearings[i, 0] / measurement_bearing_std
     for i in range(odometry.shape[0]):
         pose_idx = i * pose_size
-        if USE_RANGE_ODOM:
-            A[i + measurements.shape[0]*2, pose_idx:pose_idx + 2*pose_size] = \
-                    J_odom_ranges[i, 0] / odometry_range_std
-        if USE_BEARING_ODOM:
-            A[i + measurements.shape[0]*2 + odometry.shape[0], pose_idx:pose_idx + 2*pose_size] = \
-                    J_odom_bearings[i, 0] / odometry_angle_std
+        A[i + measurements.shape[0]*2, pose_idx:pose_idx + 2*pose_size] = \
+                J_odom_ranges[i, 0] / odometry_range_std
+        A[i + measurements.shape[0]*2 + odometry.shape[0], pose_idx:pose_idx + 2*pose_size] = \
+                J_odom_bearings[i, 0] / odometry_angle_std
 
+    # Construct the whitened residual vector
     b_ranges = (measurements[:, 0] - range_to_location(measurement_poses, \
             measurement_landmarks)).reshape(-1, 1) / measurement_range_std
     b_bearings = (measurements[:, 1] - bearing_to_location(measurement_poses, \
@@ -95,15 +89,15 @@ for iter in range(50):
             / odometry_range_std
     b_odom_bearings = (odometry[:, 1] - expected_odometry[:, 1]).reshape(-1, 1) \
             / odometry_angle_std
-
     b = np.vstack((b_ranges, b_bearings, b_odom_ranges, b_odom_bearings))
 
     # Solve the least squares problem
-    information_matrix = A.T @ A
-    R = np.linalg.cholesky(information_matrix).T
-    y = np.linalg.solve(R.T, A.T @ b)
-    delta = np.linalg.solve(R, y)
-    x += delta.reshape(-1, pose_size)
+    x_prev = x.copy()
+    x = cholesky_factorization(A, b, x)
+
+    # Check for convergence
+    if np.linalg.norm(x - x_prev) < 1e-3:
+        break
 
 # Print the time
 end_time = time.time()
