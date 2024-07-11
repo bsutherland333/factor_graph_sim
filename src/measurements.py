@@ -235,11 +235,11 @@ def odom_bearing_jacobian(pose):
     delta_x = x2 - x1
     delta_y = y2 - y1
 
-    db_dx1 = 2*delta_y / (x1**2 + x2**2 - 2*x1*x2 + delta_y**2)
-    db_dx2 = -2*delta_y / (x1**2 + x2**2 - 2*x1*x2 + delta_y**2)
-    db_dy1 = -2*delta_x / (x1**2 + x2**2 - 2*x1*x2 + y1**2 + y2**2 - 2*y1*y2)
-    db_dy2 = 2*delta_x / (x1**2 + x2**2 - 2*x1*x2 + y1**2 + y2**2 - 2*y1*y2)
-    db_dpsi1 = np.ones_like(delta_x) * -2
-    db_dpsi2 = np.zeros_like(delta_x)
+    db_dx1 = -2*delta_y / (x1**2 + x2**2 - 2*x1*x2 + delta_y**2)
+    db_dx2 = 2*delta_y / (x1**2 + x2**2 - 2*x1*x2 + delta_y**2)
+    db_dy1 = 2*delta_x / (x1**2 + x2**2 - 2*x1*x2 + y1**2 + y2**2 - 2*y1*y2)
+    db_dy2 = -2*delta_x / (x1**2 + x2**2 - 2*x1*x2 + y1**2 + y2**2 - 2*y1*y2)
+    db_dpsi1 = np.zeros_like(delta_x)
+    db_dpsi2 = np.ones_like(delta_x) * 2
 
     return np.array([[db_dx1, db_dy1, db_dpsi1, db_dx2, db_dy2, db_dpsi2]]).T.swapaxes(1, 2)
